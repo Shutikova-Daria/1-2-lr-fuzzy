@@ -1,0 +1,536 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Операції над інтервалами</title>
+
+    <script type="text/javascript">
+      function round(x) {
+        return Math.round(x * 100) / 100;
+      }
+
+      function safeNumber(val) {
+        const n = parseFloat(val);
+        return isNaN(n) ? 0 : n;
+      }
+
+      function Interval(start, end) {
+        var bounds =
+          end === undefined
+            ? Array.isArray(start)
+              ? start
+              : [start]
+            : [start, end];
+
+        bounds = bounds.map(Number);
+        this.start = Math.min.apply(Math, bounds);
+        this.end = Math.max.apply(Math, bounds);
+      }
+
+      Interval.prototype.toString = function () {
+        return `[${round(this.start)}, ${round(this.end)}]`;
+      };
+
+      Interval.prototype.add = function (B) {
+        return new Interval(this.start + B.start, this.end + B.end);
+      };
+
+      Interval.prototype.sub = function (B) {
+        return new Interval(this.start - B.end, this.end - B.start);
+      };
+
+      Interval.prototype.mult = function (B) {
+        return new Interval([
+          this.start * B.start,
+          this.start * B.end,
+          this.end * B.start,
+          this.end * B.end,
+        ]);
+      };
+
+      Interval.prototype.devide = function (B) {
+        if (B.start === 0 || B.end === 0) throw "Ділення на нуль!";
+        return new Interval(this.start / B.end, this.end / B.start);
+      };
+
+      Interval.prototype.devide2 = function (B) {
+        if (B.start === 0 || B.end === 0) throw "Ділення на нуль!";
+        return new Interval([
+          this.start / B.start,
+          this.start / B.end,
+          this.end / B.start,
+          this.end / B.end,
+        ]);
+      };
+
+      Interval.prototype.invert = function () {
+        if (this.start === 0 || this.end === 0) throw "Ділення на нуль!";
+        return new Interval(1 / this.end, 1 / this.start);
+      };
+
+      Interval.prototype.mirror = function () {
+        return new Interval(-this.end, -this.start);
+      };
+
+      Interval.prototype.max = function (B) {
+        return new Interval(
+          Math.max(this.start, B.start),
+          Math.max(this.end, B.end),
+        );
+      };
+
+      Interval.prototype.min = function (B) {
+        return new Interval(
+          Math.min(this.start, B.start),
+          Math.min(this.end, B.end),
+        );
+      };
+
+      Interval.multMany = function (intervals) {
+        let result = intervals[0];
+        for (let i = 1; i < intervals.length; i++) {
+          result = result.mult(intervals[i]);
+        }
+        return result;
+      };
+
+      function openMultiWindow() {
+        let count = parseInt(prompt("Скільки інтервалів перемножити?", "3"));
+        if (isNaN(count) || count < 1) {
+          alert("Невірне число інтервалів!");
+          return;
+        }
+
+        let intervals = [];
+
+        for (let i = 0; i < count; i++) {
+          let a = safeNumber(prompt(`Інтервал ${i + 1}: початок`, "1"));
+          let b = safeNumber(prompt(`Інтервал ${i + 1}: кінець`, "2"));
+          intervals.push(new Interval(a, b));
+        }
+
+        let R = Interval.multMany(intervals);
+        document.getElementById("result").value = R.toString();
+        drawGraph(intervals[0], intervals[1] || intervals[0], R);
+      }
+
+      function drawGraph(A, B, R) {
+        var graph = document.getElementById("graph");
+        graph.innerHTML = "";
+
+        var widthpx = 400,
+          heightpx = 200;
+
+        var min = Math.min(A.start, B.start, R.start);
+        var max = Math.max(A.end, B.end, R.end);
+
+        if (max === min) return;
+
+        var scale = widthpx / (max - min);
+
+        var canvas = document.createElement("canvas");
+        canvas.width = widthpx;
+        canvas.height = heightpx;
+        var ctx = canvas.getContext("2d");
+
+        function drawInterval(I, color, pos) {
+          const y = heightpx / 2 + pos;
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo((I.start - min) * scale, y);
+          ctx.lineTo((I.end - min) * scale, y);
+          ctx.stroke();
+
+          ctx.fillStyle = color;
+          ctx.font = "12px Arial";
+          ctx.fillText(round(I.start), (I.start - min) * scale - 10, y - 5);
+          ctx.fillText(round(I.end), (I.end - min) * scale + 2, y - 5);
+        }
+
+        drawInterval(A, "#888", -20);
+        drawInterval(B, "#444", 0);
+        drawInterval(R, "#000", 20);
+
+        graph.appendChild(canvas);
+      }
+
+      function calc(operation, type) {
+        try {
+          let A = new Interval(
+            safeNumber(document.getElementById("A_start").value),
+            safeNumber(document.getElementById("A_end").value),
+          );
+          let B = new Interval(
+            safeNumber(document.getElementById("B_start").value),
+            safeNumber(document.getElementById("B_end").value),
+          );
+          let C = new Interval(
+            safeNumber(document.getElementById("C_start").value),
+            safeNumber(document.getElementById("C_end").value),
+          );
+
+          let k = new Interval(safeNumber(document.getElementById("k").value));
+          let R;
+
+          switch (operation) {
+            case "add":
+              R = type === "Interval" ? A.add(B) : A.add(k);
+              break;
+            case "sub":
+              R = type === "Interval" ? A.sub(B) : A.sub(k);
+              break;
+            case "mult":
+              R = type === "Interval" ? A.mult(B) : A.mult(k);
+              break;
+            case "devide":
+              R = type === "Interval" ? A.devide(B) : A.devide(k);
+              break;
+            case "devide2":
+              R = A.devide2(B);
+              break;
+            case "mirror":
+              R = A.mirror();
+              break;
+            case "invert":
+              R = A.invert();
+              break;
+            case "max":
+              R = A.max(B);
+              break;
+            case "min":
+              R = A.min(B);
+              break;
+            case "addToA":
+              R = A.add(
+                new Interval(
+                  safeNumber(document.getElementById("addToA_val").value),
+                ),
+              );
+              break;
+            case "subFromB":
+              R = B.sub(
+                new Interval(
+                  safeNumber(document.getElementById("subFromB_val").value),
+                ),
+              );
+              break;
+            case "multA":
+              R = A.mult(
+                new Interval(
+                  safeNumber(document.getElementById("multA_val").value),
+                ),
+              );
+              break;
+            case "divB":
+              R = B.devide(
+                new Interval(
+                  safeNumber(document.getElementById("divB_val").value),
+                ),
+              );
+              break;
+            case "lab1_1":
+              R = A.add(B).sub(C);
+              break;
+            case "lab1_2":
+              R = A.add(B.mirror()).sub(C);
+              break;
+
+            case "lab1_3":
+              R = C.mirror().add(
+                new Interval(safeNumber(document.getElementById("k").value)),
+              );
+              break;
+            case "lab1_4":
+              let kval = safeNumber(document.getElementById("k").value);
+              R = new Interval(kval).sub(B);
+              break;
+            case "lab2_1":
+              R = A.mult(C);
+              break;
+            case "lab2_2":
+              R = B.devide(A);
+              break;
+
+            case "lab2_3":
+              R = A.min(B.invert());
+              break;
+            case "lab2_4":
+              R = C.max(A);
+              break;
+
+            default:
+              return;
+          }
+
+          document.getElementById("result").value = R.toString();
+          drawGraph(A, B, R);
+        } catch (err) {
+          alert("Помилка: " + err);
+        }
+      }
+    </script>
+
+    <style>
+      body {
+        background: linear-gradient(to right, #e0eafc, #cfdef3);
+        font-family: "Segoe UI", sans-serif;
+        color: #111;
+      }
+      h2 {
+        color: #1a237e;
+        text-shadow: 1px 1px 2px #fff;
+      }
+      #container {
+        display: flex;
+        gap: 25px;
+        justify-content: center;
+        align-items: flex-start;
+        margin-top: 25px;
+        flex-wrap: wrap;
+      }
+      table {
+        background: #fff;
+        border-radius: 15px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        padding: 20px;
+        border-collapse: separate;
+        border-spacing: 0;
+      }
+      td {
+        padding: 12px;
+        vertical-align: top;
+      }
+      input[type="number"],
+      input[type="text"] {
+        width: 90px;
+        padding: 6px;
+        border: 1px solid #aaa;
+        border-radius: 8px;
+        background: #f3f6f9;
+        color: #111;
+        font-weight: 500;
+      }
+      input[type="text"][readonly] {
+        background: #e0e0e0;
+        font-weight: bold;
+      }
+      input[type="radio"],
+      input[type="number"] {
+        margin: 3px;
+      }
+      label {
+        color: #222;
+        font-size: 14px;
+        margin-right: 5px;
+        cursor: pointer;
+      }
+      button {
+        padding: 8px 18px;
+        border: none;
+        border-radius: 8px;
+        background: #3949ab;
+        color: #fff;
+        cursor: pointer;
+        font-weight: bold;
+        margin-top: 8px;
+        transition: 0.3s;
+      }
+      button:hover {
+        background: #1a237e;
+      }
+      #graph {
+        background: #fff;
+        padding: 12px;
+        border-radius: 12px;
+        box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.1);
+        margin-top: 15px;
+      }
+      #graph canvas {
+        display: block;
+        margin: 0 auto;
+      }
+      hr {
+        border: 0;
+        border-top: 1px solid #ddd;
+        margin: 10px 0;
+      }
+      font[color="#0a0"] {
+        font-weight: bold;
+      }
+    </style>
+  </head>
+
+  <body>
+    <center>
+      <h2>Операції над інтервалами</h2>
+
+      <div id="container">
+        <table>
+          <tr>
+            <td>
+              <font color="#444">Інтервал A:</font><br />
+              <input id="A_start" type="number" value="-8" />
+              <input id="A_end" type="number" value="2" /><br />
+
+              <font color="#444">Інтервал B:</font><br />
+              <input id="B_start" type="number" value="-1" />
+              <input id="B_end" type="number" value="1" /><br />
+
+              <font color="#444">Інтервал C:</font><br />
+              <input id="C_start" type="number" value="4" />
+              <input id="C_end" type="number" value="10" /><br />
+
+              <font color="#000">Чітке число k:</font><br />
+              <input id="k" type="number" value="-6" />
+            </td>
+
+            <td>
+              <b>Оберіть операцію:</b><br />
+              <label
+                ><input
+                  type="radio"
+                  name="op"
+                  onclick="calc('add', 'Interval')"
+                />
+                Додавання</label
+              ><br />
+              <label
+                ><input
+                  type="radio"
+                  name="op"
+                  onclick="calc('sub', 'Interval')"
+                />
+                Віднімання</label
+              ><br />
+              <label
+                ><input
+                  type="radio"
+                  name="op"
+                  onclick="calc('mult', 'Interval')"
+                />
+                Множення</label
+              ><br />
+              <label
+                ><input
+                  type="radio"
+                  name="op"
+                  onclick="calc('devide', 'Interval')"
+                />
+                Ділення</label
+              ><br />
+              <label
+                ><input type="radio" name="op" onclick="calc('devide2')" />
+                Ділення (гіпотеза)</label
+              ><br />
+              <label
+                ><input type="radio" name="op" onclick="calc('mirror')" />
+                Відображення A</label
+              ><br />
+              <label
+                ><input type="radio" name="op" onclick="calc('invert')" />
+                Інверсія B</label
+              ><br />
+              <label
+                ><input
+                  type="radio"
+                  name="op"
+                  onclick="calc('max', 'Interval')"
+                />
+                Максимум</label
+              ><br />
+              <label
+                ><input
+                  type="radio"
+                  name="op"
+                  onclick="calc('min', 'Interval')"
+                />
+                Мінімум</label
+              ><br />
+              <hr />
+              <label
+                ><input
+                  type="radio"
+                  name="op"
+                  onclick="calc('add', 'Number')"
+                />
+                Додавання до A числа k</label
+              ><br />
+              <label
+                ><input
+                  type="radio"
+                  name="op"
+                  onclick="calc('sub', 'Number')"
+                />
+                Віднімання від A числа k</label
+              ><br />
+              <label
+                ><input
+                  type="radio"
+                  name="op"
+                  onclick="calc('mult', 'Number')"
+                />
+                Множення A на k</label
+              ><br />
+              <label
+                ><input
+                  type="radio"
+                  name="op"
+                  onclick="calc('devide', 'Number')"
+                />
+                Ділення A на k</label
+              ><br />
+              <hr />
+              <b>Операції з числом:</b><br />
+              <label
+                ><input type="radio" name="op" onclick="calc('addToA')" />
+                Додавання до A:
+                <input id="addToA_val" type="number" value="0" /></label
+              ><br />
+              <label
+                ><input type="radio" name="op" onclick="calc('subFromB')" />
+                Віднімання від B:
+                <input id="subFromB_val" type="number" value="0" /></label
+              ><br />
+              <label
+                ><input type="radio" name="op" onclick="calc('multA')" />
+                Множення A на число:
+                <input id="multA_val" type="number" value="0" /></label
+              ><br />
+              <label
+                ><input type="radio" name="op" onclick="calc('divB')" /> Ділення
+                B на число:
+                <input id="divB_val" type="number" value="1" /></label
+              ><br />
+
+              <button onclick="openMultiWindow()">
+                Множення декількох інтервалів
+              </button>
+              <hr />
+              <b>Лабораторна №1</b><br />
+              <button onclick="calc('lab1_1')">A (+) B (−) C</button>
+              <button onclick="calc('lab1_2')">A (+) B⁻ (−) C</button>
+              <button onclick="calc('lab1_3')">C⁻ (+) k</button>
+              <button onclick="calc('lab1_4')">k (−) B</button>
+
+              <hr />
+              <b>Лабораторна №2</b><br />
+              <button onclick="calc('lab2_1')">A (·) C</button>
+              <button onclick="calc('lab2_2')">B (:) A</button>
+              <button onclick="calc('lab2_3')">A (∧) B⁻¹</button>
+              <button onclick="calc('lab2_4')">C (∨) A</button>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2">
+              <font color="#000">Результат:</font><br />
+              <input id="result" type="text" readonly />
+            </td>
+          </tr>
+        </table>
+
+        <div id="graph"></div>
+      </div>
+    </center>
+  </body>
+</html>
