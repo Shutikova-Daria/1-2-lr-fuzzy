@@ -23,8 +23,11 @@
             : [start, end];
 
         bounds = bounds.map(Number);
-        this.start = Math.min.apply(Math, bounds);
-        this.end = Math.max.apply(Math, bounds);
+        this.start = bounds[0];
+
+        if (this.start > this.end) {
+          throw "Неправильний інтервал: початок більше кінця!";
+        }
       }
 
       Interval.prototype.toString = function () {
@@ -49,8 +52,20 @@
       };
 
       Interval.prototype.devide = function (B) {
-        if (B.start === 0 || B.end === 0) throw "Ділення на нуль!";
-        return new Interval(this.start / B.end, this.end / B.start);
+        if (B.start <= 0 && B.end >= 0)
+          throw "Ділення на інтервал, що містить 0 або мають (-) — заборонено!";
+
+        let result = new Interval([
+          this.start / B.start,
+          this.start / B.end,
+          this.end / B.start,
+          this.end / B.end,
+        ]);
+
+        if (result.start < 0 || result.end < 0)
+          throw "Результат ділення має бути тільки додатним інтервалом!";
+
+        return result;
       };
 
       Interval.prototype.devide2 = function (B) {
@@ -64,7 +79,8 @@
       };
 
       Interval.prototype.invert = function () {
-        if (this.start === 0 || this.end === 0) throw "Ділення на нуль!";
+        if (this.start <= 0)
+          throw "Інверсія можлива тільки для додатного інтервалу!";
         return new Interval(1 / this.end, 1 / this.start);
       };
 
@@ -161,46 +177,60 @@
             safeNumber(document.getElementById("A_start").value),
             safeNumber(document.getElementById("A_end").value),
           );
+
           let B = new Interval(
             safeNumber(document.getElementById("B_start").value),
             safeNumber(document.getElementById("B_end").value),
           );
+
           let C = new Interval(
             safeNumber(document.getElementById("C_start").value),
             safeNumber(document.getElementById("C_end").value),
           );
 
           let k = new Interval(safeNumber(document.getElementById("k").value));
+
           let R;
 
           switch (operation) {
             case "add":
               R = type === "Interval" ? A.add(B) : A.add(k);
               break;
+
             case "sub":
               R = type === "Interval" ? A.sub(B) : A.sub(k);
               break;
+
             case "mult":
               R = type === "Interval" ? A.mult(B) : A.mult(k);
               break;
+
             case "devide":
               R = type === "Interval" ? A.devide(B) : A.devide(k);
               break;
+
             case "devide2":
               R = A.devide2(B);
               break;
+
             case "mirror":
               R = A.mirror();
               break;
+
             case "invert":
-              R = A.invert();
+              R = B.invert();
               break;
+
             case "max":
               R = A.max(B);
               break;
+
             case "min":
               R = A.min(B);
               break;
+
+            /* ===== Операції з числом ===== */
+
             case "addToA":
               R = A.add(
                 new Interval(
@@ -208,6 +238,7 @@
                 ),
               );
               break;
+
             case "subFromB":
               R = B.sub(
                 new Interval(
@@ -215,6 +246,7 @@
                 ),
               );
               break;
+
             case "multA":
               R = A.mult(
                 new Interval(
@@ -222,6 +254,7 @@
                 ),
               );
               break;
+
             case "divB":
               R = B.devide(
                 new Interval(
@@ -229,9 +262,13 @@
                 ),
               );
               break;
+
+            /* ===== Лабораторна 1 ===== */
+
             case "lab1_1":
               R = A.add(B).sub(C);
               break;
+
             case "lab1_2":
               R = A.add(B.mirror()).sub(C);
               break;
@@ -241,13 +278,18 @@
                 new Interval(safeNumber(document.getElementById("k").value)),
               );
               break;
+
             case "lab1_4":
               let kval = safeNumber(document.getElementById("k").value);
               R = new Interval(kval).sub(B);
               break;
+
+            /* ===== Лабораторна 2 ===== */
+
             case "lab2_1":
               R = A.mult(C);
               break;
+
             case "lab2_2":
               R = B.devide(A);
               break;
@@ -255,6 +297,7 @@
             case "lab2_3":
               R = A.min(B.invert());
               break;
+
             case "lab2_4":
               R = C.max(A);
               break;
@@ -264,10 +307,35 @@
           }
 
           document.getElementById("result").value = R.toString();
+          window.lastResult = R;
           drawGraph(A, B, R);
         } catch (err) {
           alert("Помилка: " + err);
         }
+      }
+
+      function resultToA() {
+        if (!window.lastResult) {
+          alert("Спочатку виконайте обчислення!");
+          return;
+        }
+
+        document.getElementById("A_start").value = round(
+          window.lastResult.start,
+        );
+        document.getElementById("A_end").value = round(window.lastResult.end);
+      }
+
+      function resultToB() {
+        if (!window.lastResult) {
+          alert("Спочатку виконайте обчислення!");
+          return;
+        }
+
+        document.getElementById("B_start").value = round(
+          window.lastResult.start,
+        );
+        document.getElementById("B_end").value = round(window.lastResult.end);
       }
     </script>
 
@@ -506,6 +574,10 @@
               <button onclick="openMultiWindow()">
                 Множення декількох інтервалів
               </button>
+              <br />
+              <button onclick="resultToA()">Результат → A</button>
+              <button onclick="resultToB()">Результат → B</button>
+
               <hr />
               <b>Лабораторна №1</b><br />
               <button onclick="calc('lab1_1')">A (+) B (−) C</button>
@@ -521,6 +593,7 @@
               <button onclick="calc('lab2_4')">C (∨) A</button>
             </td>
           </tr>
+          <tr></tr>
           <tr>
             <td colspan="2">
               <font color="#000">Результат:</font><br />
