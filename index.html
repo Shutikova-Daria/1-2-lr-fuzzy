@@ -24,6 +24,7 @@
 
         bounds = bounds.map(Number);
         this.start = bounds[0];
+        this.end = bounds[1];
 
         if (this.start > this.end) {
           throw "Неправильний інтервал: початок більше кінця!";
@@ -62,6 +63,7 @@
           this.end / B.end,
         ]);
 
+        // результат має бути тільки додатний
         if (result.start < 0 || result.end < 0)
           throw "Результат ділення має бути тільки додатним інтервалом!";
 
